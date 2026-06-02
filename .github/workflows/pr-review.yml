@@ -22,7 +22,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "thread_name": "[PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}",
-              "content": "${{ github.event.pull_request.html_url }}"
+              "content": "생성자: ${{ github.event.pull_request.user.login }}\n${{ github.event.pull_request.html_url }}"
             }' \
             "${{ secrets.DISCORD_WEBHOOK_URL }}?wait=true")
           THREAD_ID=$(echo "$RESPONSE" | jq -r '.channel_id')
@@ -36,6 +36,8 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
+    outputs:
+      model: ${{ steps.selector.outputs.model }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,10 +79,11 @@ jobs:
     steps:
       - name: Comment on Discord thread
         run: |
+          MODEL="${{ needs.review.outputs.model }}"
           if [ "${{ needs.review.result }}" = "success" ]; then
-            MESSAGE="✅ 리뷰 완료"
+            MESSAGE="✅ 리뷰 완료 (모델: $MODEL)"
           else
-            MESSAGE="⚠️ 리뷰 실패 (${{ needs.review.result }})"
+            MESSAGE="⚠️ 리뷰 실패 (${{ needs.review.result }}, 모델: $MODEL)"
           fi
           curl -s -X POST \
             -H "Content-Type: application/json" \
