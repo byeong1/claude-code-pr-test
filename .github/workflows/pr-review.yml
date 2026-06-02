@@ -1,0 +1,71 @@
+name: PR Auto Review
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # 1) 포럼에 스레드 생성하고 thread_id 확보 (디버그: 응답 JSON 전체 로그)
+  create-thread:
+    runs-on: ubuntu-latest
+    outputs:
+      thread_id: ${{ steps.create.outputs.thread_id }}
+    steps:
+      - name: Create Discord forum thread (debug)
+        id: create
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "thread_name": "[PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}",
+              "content": "**새 PR 생성됨**\n작성자: ${{ github.event.pull_request.user.login }}\n${{ github.event.pull_request.html_url }}"
+            }' \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}?wait=true")
+
+          echo "===== RAW RESPONSE (debug) ====="
+          echo "$RESPONSE"
+          echo "================================"
+          echo "----- jq keys -----"
+          echo "$RESPONSE" | jq -r 'keys' || echo "jq parse failed"
+          echo "channel_id = $(echo "$RESPONSE" | jq -r '.channel_id')"
+          echo "id         = $(echo "$RESPONSE" | jq -r '.id')"
+
+          THREAD_ID=$(echo "$RESPONSE" | jq -r '.channel_id')
+          echo "thread_id=$THREAD_ID" >> "$GITHUB_OUTPUT"
+
+  # 2) Claude /review 실행 -> PR에 인라인 코멘트
+  review:
+    needs: create-thread
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: "/review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          claude_args: "--max-turns 15"
+
+  # 3) 리뷰 완료를 포럼 스레드에 댓글로 통지
+  notify-thread:
+    needs: [create-thread, review]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on Discord thread
+        run: |
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "content": "**리뷰 완료** (결과: ${{ needs.review.result }})\nPR에서 코멘트 확인: ${{ github.event.pull_request.html_url }}"
+            }' \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}?thread_id=${{ needs.create-thread.outputs.thread_id }}"
