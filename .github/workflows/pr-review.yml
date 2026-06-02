@@ -65,9 +65,12 @@ jobs:
     steps:
       - name: Comment on Discord thread
         run: |
+          if [ "${{ needs.review.result }}" = "success" ]; then
+            MESSAGE="✅ 리뷰 완료"
+          else
+            MESSAGE="⚠️ 리뷰 실패 (${{ needs.review.result }})"
+          fi
           curl -s -X POST \
             -H "Content-Type: application/json" \
-            -d '{
-              "content": "**리뷰 완료** (결과: ${{ needs.review.result }})\nPR에서 코멘트 확인: ${{ github.event.pull_request.html_url }}"
-            }' \
+            -d "{\"content\": \"$MESSAGE\"}" \
             "${{ secrets.DISCORD_WEBHOOK_URL }}?thread_id=${{ needs.create-thread.outputs.thread_id }}"
