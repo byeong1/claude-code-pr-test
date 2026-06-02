@@ -55,7 +55,7 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
-          claude_args: "--max-turns 15"
+          claude_args: "--max-turns 30 --model claude-opus-4-7"
 
   # 3) 리뷰 완료를 포럼 스레드에 댓글로 통지
   notify-thread:
