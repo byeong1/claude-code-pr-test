@@ -38,6 +38,7 @@ jobs:
       id-token: write
     outputs:
       model: ${{ steps.selector.outputs.model }}
+      outcome: ${{ steps.claude.outcome }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +61,7 @@ jobs:
           fi
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         continue-on-error: true
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -80,10 +82,12 @@ jobs:
       - name: Comment on Discord thread
         run: |
           MODEL="${{ needs.review.outputs.model }}"
-          if [ "${{ needs.review.result }}" = "success" ]; then
+          OUTCOME="${{ needs.review.outputs.outcome }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "$OUTCOME" = "success" ]; then
             MESSAGE="✅ 리뷰 완료 (모델: $MODEL)"
           else
-            MESSAGE="⚠️ 리뷰 실패 (${{ needs.review.result }}, 모델: $MODEL)"
+            MESSAGE="⚠️ 리뷰 실패 (사유: ${OUTCOME:-unknown}, 모델: $MODEL)\n로그: $RUN_URL"
           fi
           curl -s -X POST \
             -H "Content-Type: application/json" \
