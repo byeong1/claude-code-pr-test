@@ -22,7 +22,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "thread_name": "[PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}",
-              "content": "생성자: ${{ github.event.pull_request.user.login }}\n변경: ${{ github.event.pull_request.head.ref }} -> ${{ github.event.pull_request.base.ref }}\n\n${{ github.event.pull_request.html_url }}"
+              "content": "Author: ${{ github.event.pull_request.user.login }}\nBranch: ${{ github.event.pull_request.head.ref }} -> ${{ github.event.pull_request.base.ref }}\n\n${{ github.event.pull_request.html_url }}"
             }' \
             "${{ secrets.DISCORD_WEBHOOK_URL }}?wait=true")
           THREAD_ID=$(echo "$RESPONSE" | jq -r '.channel_id')
