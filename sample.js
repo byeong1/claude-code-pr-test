@@ -1,33 +1,26 @@
-// 리뷰 테스트용 샘플 코드 - 의도적 버그/문제 포함
+// 리뷰 테스트용 샘플 코드 - 입력과 무관하게 확실히 틀린 버그 포함
 
-// 버그 1: null/undefined 체크 없이 프로퍼티 접근
-function getUserName(user) {
-  return user.profile.name;
+// 버그 1: 정의되지 않은 변수 참조 (ReferenceError, 항상 발생)
+function greet(name) {
+  return "Hello " + usernme; // 오타: usernme 는 선언되지 않음
 }
 
-// 버그 2: async 함수인데 await 누락 -> Promise가 그대로 반환됨
-async function fetchTotal(api) {
-  const orders = api.getOrders(); // await 빠짐
+// 버그 2: const 재할당 (TypeError, 항상 발생)
+function increment() {
+  const count = 0;
+  count = count + 1; // const 는 재할당 불가
+  return count;
+}
+
+// 버그 3: 무한 루프 (i를 증가시키지 않음)
+function sumTo(n) {
   let total = 0;
-  for (let i = 0; i <= orders.length; i++) { // off-by-one: <= 로 인해 마지막에 undefined 접근
-    total += orders[i].amount;
+  let i = 0;
+  while (i < n) {
+    total += i;
+    // i++ 누락 -> 무한 루프
   }
   return total;
 }
 
-// 버그 3: 0으로 나누기 예외 처리 없음
-function average(numbers) {
-  let sum = 0;
-  numbers.forEach((n) => (sum += n));
-  return sum / numbers.length; // numbers가 빈 배열이면 NaN
-}
-
-// 버그 4: == 사용으로 의도치 않은 형변환
-function isAdmin(role) {
-  return role == 1; // "1" 문자열도 true가 됨
-}
-
-// 버그 5: 사용하지 않는 변수 + var 사용
-var unusedConfig = { retry: 3 };
-
-module.exports = { getUserName, fetchTotal, average, isAdmin };
+module.exports = { greet, increment, sumTo };
